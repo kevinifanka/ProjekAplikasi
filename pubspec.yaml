@@ -1,0 +1,47 @@
+name: aplikasi_tugasakhir_presensi
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  camera: ^0.10.5+5
+  geolocator: ^10.1.0
+  geocoding: ^2.1.0
+  permission_handler: ^11.3.0
+  google_mlkit_face_detection: ^0.10.0
+  google_mlkit_commons: ^0.7.1
+  intl: ^0.18.1
+  table_calendar: ^3.0.9
+  local_auth: ^2.1.6
+  skeletonizer: ^0.6.0
+  dropdown_button2: ^2.3.9
+  path_provider: ^2.1.1
+  google_maps_flutter: ^2.6.0
+
+  
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+
+  uses-material-design: true
+
+  assets:
+    - images/face.png
+    - images/Android Face.png
+    - images/Frame 32.png
+    - images/Frame 34.png
+    - images/google.png
+    - images/Group.png
+    - images/Home filled.png
+    - images/Saya.png
