@@ -1,13 +1,15 @@
 // ignore_for_file: unused_import
 
-import 'package:aplikasi_tugasakhir_presensi/halamanfitur/cuti_hariini.dart';
+import 'package:aplikasi_tugasakhir_presensi/Dashboard%20_Admin/ApprovalDashboard.dart';
+import 'package:aplikasi_tugasakhir_presensi/halamanfitur/kehadiranmanual.dart';
 import 'package:aplikasi_tugasakhir_presensi/halamanfitur/lemburpage_screen.dart';
+import 'package:aplikasi_tugasakhir_presensi/halamanfitur/perubahanshift.dart';
 import 'package:aplikasi_tugasakhir_presensi/onboarding/face_scan_page.dart';
-import 'package:aplikasi_tugasakhir_presensi/onboarding/kalender_screen.dart';
+import 'package:aplikasi_tugasakhir_presensi/halamanfitur/permintaancuti_page.dart';
+import 'package:aplikasi_tugasakhir_presensi/halamanfitur/permintaan_gaji_page.dart';
 import 'package:flutter/material.dart';
-// ignore: duplicate_import
-import 'package:aplikasi_tugasakhir_presensi/onboarding/kalender_screen.dart';
 import 'package:aplikasi_tugasakhir_presensi/halamanfitur/profile_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const MyApp());
@@ -42,9 +44,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   final List<Widget> _pages = const [
     HomeContent(),
-    TableBasicsExample(),
     FaceScanPage(),
-    Center(child: Text('Pesan')),
     ProfilePage(),
   ];
 
@@ -71,9 +71,7 @@ class _DashboardPageState extends State<DashboardPage> {
           },
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Beranda'),
-            BottomNavigationBarItem(icon: Icon(Icons.calendar_month), label: 'Kalender'),
             BottomNavigationBarItem(icon: Icon(Icons.fingerprint), label: 'Kehadiran'),
-            BottomNavigationBarItem(icon: Icon(Icons.message), label: 'Pesan'),
             BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
           ],
         ),
@@ -105,8 +103,31 @@ Widget _buildMenuItem(IconData icon, String label, Color color, VoidCallback onT
   );
 }
 
-class HomeContent extends StatelessWidget {
+class HomeContent extends StatefulWidget {
   const HomeContent({super.key});
+
+  @override
+  State<HomeContent> createState() => _HomeContentState();
+}
+
+class _HomeContentState extends State<HomeContent> {
+  String _userName = 'Pengguna';
+  
+  @override
+  void initState() {
+    super.initState();
+    _loadUserName();
+  }
+
+  Future<void> _loadUserName() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString('name') ?? 'Pengguna';
+    if (mounted) {
+      setState(() {
+        _userName = name;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -138,15 +159,15 @@ class HomeContent extends StatelessWidget {
                       backgroundImage: AssetImage('images/Group.png'),
                     ),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Kevin Ifanka',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            _userName,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                           ),
-                          Text(
+                          const Text(
                             'Smart Clock In Presensi',
                             style: TextStyle(fontSize: 12),
                           ),
@@ -170,31 +191,45 @@ class HomeContent extends StatelessWidget {
                 mainAxisSpacing: 12,
                 children: [
                   _buildMenuItem(Icons.beach_access, 'Cuti', Colors.red, () {
-                     MaterialPageRoute(builder: (context) => CutiHariPage());
-                  }),
-                  _buildMenuItem(Icons.access_time, 'Lembur', Colors.red, () {
-                    Navigator.push(context, 
-                    MaterialPageRoute(builder: (context) => CutiHariPage()),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) =>  PengajuanCutiPage()),
                     );
                   }),
-                  _buildMenuItem(Icons.edit_calendar, 'Kehadiran', Colors.orange, () {
-                    
-                    MaterialPageRoute(builder: (context) => CutiHariPage());
-                  
+                  _buildMenuItem(Icons.access_time, 'Lembur', Colors.red, () {
+                    Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => const PengajuanLemburPage()),
+                    );
                   }),
-                  _buildMenuItem(Icons.swap_horiz, 'Perubahan', Colors.orange, () {
-                    // aksi perubahan shift
+                    _buildMenuItem(Icons.edit_calendar, 'Hadir Manual', Colors.orange, () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const KehadiranManualPage()),
+                    );
                   }),
-                  _buildMenuItem(Icons.edit_location_alt, 'Kehadiran', Colors.amber, () {}),
-                  _buildMenuItem(Icons.money, 'Kasbon', Colors.green, () {}),
-                  _buildMenuItem(Icons.attach_money, 'Reimburse', Colors.green, () {}),
-                  _buildMenuItem(Icons.more_horiz, 'Permintaan', Colors.grey, () {}),
-                  _buildMenuItem(Icons.task, 'Manajemen', Colors.grey, () {}),
-                  _buildMenuItem(Icons.folder, 'Manajemen', Colors.blue, () {}),
+
+                  _buildMenuItem(Icons.swap_horiz, 'PerubahanShift', Colors.orange, () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const PengajuanPerubahanShiftPage()),
+                    );
+                  }),
+                  _buildMenuItem(Icons.money, 'PermintaanGaji', Colors.green, () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const PermintaanGajiPage()),
+                    );
+                  }),
+                  _buildMenuItem(Icons.money, 'HRD Admin', Colors.green, () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ApprovalDashboard()),
+                    );
+                  }),
                 ],
               ),
 
-              const SizedBox(height: 75),
+              const SizedBox(height: 210),
 
               // List Section
               Expanded(
@@ -216,14 +251,8 @@ class HomeContent extends StatelessWidget {
                         onTap: () => Navigator.pushNamed(context, '/daftar_karyawan'),
                       ),
                       const SizedBox(height: 12),
-                      ListTile(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        tileColor: Colors.grey[100],
-                        title: const Text('Cuti Hari Ini'),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                        onTap: () => Navigator.pushNamed(context, '/cuti_hariini'),
-                      ),
-                      const SizedBox(height: 20),
+                      
+              
                     ],
                   ),
                 ),

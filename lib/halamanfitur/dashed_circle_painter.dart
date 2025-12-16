@@ -1,21 +1,5 @@
-// ignore_for_file: unused_import, unused_field, unused_local_variable
-
-import 'dart:async';
-import 'dart:typed_data';
-import 'dart:ui';
 import 'dart:math' as math;
-import 'dart:io' show Platform, File;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:camera/camera.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
-import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
-import 'package:google_mlkit_commons/google_mlkit_commons.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:aplikasi_tugasakhir_presensi/halamanfitur/ClockOutResultPage.dart';
 
 class DashedCirclePainter extends CustomPainter {
   final Color color;
@@ -52,8 +36,3 @@ class DashedCirclePainter extends CustomPainter {
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => true;
 }
-
-// ClockInPage class dilanjutkan sesuai kode sebelumnya
-// (tidak ada perubahan logika lain yang perlu dimodifikasi)
-// Tambahkan import berikut jika dipisah ke file lain:
-// import 'package:aplikasi_tugasakhir_presensi/halamanfitur/dashed_circle_painter.dart';

@@ -1,21 +1,21 @@
-// ignore_for_file: unused_import
-
 import 'dart:async';
-import 'dart:typed_data';
-import 'dart:ui';
 import 'dart:math' as math;
-import 'dart:io' show Directory, File, Platform; // ✅ Tambahkan File untuk menyimpan gambar
-import 'package:aplikasi_tugasakhir_presensi/halamanfitur/ClockOutResultPage.dart';
+import 'dart:io' show Directory, File, Platform;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:aplikasi_tugasakhir_presensi/halamanfitur/ClockOutResultPage.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart'; // ✅ Untuk mendapatkan direktori penyimpanan
+import 'package:path_provider/path_provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:aplikasi_tugasakhir_presensi/halamanfitur/dashed_circle_painter.dart';
 
 class ClockInPage extends StatefulWidget {
   @override
@@ -27,30 +27,35 @@ class _ClockInPageState extends State<ClockInPage>
   CameraController? _cameraController;
   late FaceDetector _faceDetector;
   bool _isDetecting = false;
-  bool _isCapturing = false; // ✅ Status capturing
+  bool _isCapturing = false;
   double? _smileProbability;
   String _address = 'Mendeteksi lokasi...';
   Timer? _timer;
-  int _start = 10;
+  int _start = 60;
   String _currentTime = '';
   bool _mounted = true;
   late AnimationController _rotationController;
   List<CameraDescription> _cameras = [];
   int _selectedCameraIndex = 0;
-  String? _capturedImagePath; // ✅ Path gambar yang diambil
+  final ImagePicker _imagePicker = ImagePicker();
+  bool _isUsingImagePicker = false;
+  XFile? _selectedImage;
 
   Color _circleColor = Colors.red;
+  bool _isClockedIn = false;
+  static const double _smileThreshold = 0.70;
 
   @override
   void initState() {
     super.initState();
+    _loadClockStatus();
     _faceDetector = FaceDetector(
       options: FaceDetectorOptions(
         enableContours: true,
-        enableClassification: true,
+        enableClassification: true, // Penting untuk deteksi senyum
         enableLandmarks: true,
         enableTracking: true,
-        minFaceSize: 0.15,
+        minFaceSize: 0.1, // Lebih kecil untuk deteksi lebih sensitif
         performanceMode: FaceDetectorMode.accurate,
       ),
     );
@@ -65,6 +70,23 @@ class _ClockInPageState extends State<ClockInPage>
     )..repeat();
   }
 
+  Future<void> _loadClockStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isClockedIn = prefs.getBool('isClockedIn') ?? false;
+    if (_mounted) {
+      setState(() {
+        _isClockedIn = isClockedIn;
+      });
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh status ketika halaman muncul kembali
+    _loadClockStatus();
+  }
+
   void _updateTime() {
     final now = DateTime.now();
     if (!_mounted) return;
@@ -73,10 +95,26 @@ class _ClockInPageState extends State<ClockInPage>
     });
   }
 
+  String _formatTimer(int seconds) {
+    int minutes = seconds ~/ 60;
+    int secs = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+  }
+
   Future<void> _initPermissions() async {
     if (kIsWeb || Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
-      await _initCamera();
-      await _getLocation();
+      // Untuk desktop platforms, coba gunakan camera plugin dulu
+      try {
+        await _initCamera();
+        await _getLocation();
+      } catch (e) {
+        // Jika camera plugin gagal, gunakan image picker sebagai fallback
+        setState(() {
+          _isUsingImagePicker = true;
+          _address = 'Gunakan tombol "Pilih Foto" untuk mengambil gambar dari kamera laptop';
+        });
+        await _getLocation();
+      }
     } else {
       final cameraStatus = await Permission.camera.request();
       final locationStatus = await Permission.location.request();
@@ -165,7 +203,7 @@ class _ClockInPageState extends State<ClockInPage>
       if (!_mounted) return;
 
       _cameraController!.startImageStream((CameraImage image) {
-        if (_isDetecting || _isCapturing) return; // ✅ Jangan deteksi saat capturing
+        if (_isDetecting || _isCapturing) return;
         _isDetecting = true;
 
         _detectFaces(image).then((_) {
@@ -213,10 +251,71 @@ class _ClockInPageState extends State<ClockInPage>
     setState(() {});
   }
 
-  // ✅ Fungsi untuk mengambil foto
+  Future<void> _pickImageFromCamera() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+      
+      if (image != null) {
+        setState(() {
+          _selectedImage = image;
+        });
+        
+        // Simulasi deteksi wajah untuk image picker
+        await _simulateFaceDetection();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengambil foto: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _simulateFaceDetection() async {
+    // Simulasi deteksi wajah untuk image picker
+    setState(() {
+      _smileProbability = 0.85; // Simulasi senyum yang baik
+      _circleColor = Colors.green;
+    });
+  }
+
   Future<void> _capturePhoto() async {
-    if (_cameraController == null || !_cameraController!.value.isInitialized || _isCapturing) {
+    if (_isCapturing) {
       return;
+    }
+
+    final currentSmile = _smileProbability ?? 0.0;
+    final bool isSmileAccepted = currentSmile >= _smileThreshold;
+    if (!isSmileAccepted && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Wajah Anda tidak tersenyum, mohon tersenyum lebar lalu ambil presensi kembali.',
+          ),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
+
+    // Cek lokasi
+    Position? currentPosition;
+    try {
+      currentPosition = await Geolocator.getCurrentPosition(
+        timeLimit: const Duration(seconds: 5),
+      );
+    } catch (e) {
+      currentPosition = null;
     }
 
     setState(() {
@@ -224,40 +323,49 @@ class _ClockInPageState extends State<ClockInPage>
     });
 
     try {
-      // Stop image stream sementara untuk mengambil foto
-      await _cameraController!.stopImageStream();
+      String photoPath;
       
-      // Ambil foto
-      final XFile photo = await _cameraController!.takePicture();
-      
-      // Simpan path gambar
-      setState(() {
-        _capturedImagePath = photo.path;
-      });
-
-      // ✅ Optional: Simpan foto dengan nama yang lebih deskriptif
-      await _savePhotoWithCustomName(photo.path);
-
-      // ✅ Navigasi ke halaman hasil setelah berhasil capture
-      if (mounted) {
-        // Get current position for the result page
-        Position? currentPosition;
-        try {
-          currentPosition = await Geolocator.getCurrentPosition(
-            timeLimit: const Duration(seconds: 5),
-          );
-        } catch (e) {
-          // Ignore location error
+      if (_isUsingImagePicker) {
+        // Jika menggunakan image picker, ambil foto dari kamera
+        if (_selectedImage == null) {
+          await _pickImageFromCamera();
+          if (_selectedImage == null) {
+            setState(() {
+              _isCapturing = false;
+            });
+            return;
+          }
         }
+        photoPath = _selectedImage!.path;
+      } else {
+        // Jika menggunakan camera controller
+        if (_cameraController == null || !_cameraController!.value.isInitialized) {
+          setState(() {
+            _isCapturing = false;
+          });
+          return;
+        }
+        
+        await _cameraController!.stopImageStream();
+        final XFile photo = await _cameraController!.takePicture();
+        photoPath = photo.path;
+      }
 
-        // Navigate to result page
+      await _savePhotoWithCustomName(photoPath);
+
+      if (mounted) {
+        // Tentukan apakah ini clock in atau clock out berdasarkan status saat ini
+        final isClockIn = !_isClockedIn;
+        
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => ClockOutResultPage(
-              capturedImagePath: photo.path,
+              capturedImagePath: photoPath,
               userPosition: currentPosition,
               userAddress: _address,
+              isClockIn: isClockIn,
+              isSmileAccepted: isSmileAccepted,
             ),
           ),
         );
@@ -269,7 +377,7 @@ class _ClockInPageState extends State<ClockInPage>
           SnackBar(
             content: Text('Gagal mengambil foto: ${e.toString()}'),
             backgroundColor: Colors.red,
-            duration: Duration(seconds: 3),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -280,29 +388,21 @@ class _ClockInPageState extends State<ClockInPage>
     }
   }
 
-  // ✅ Fungsi untuk menyimpan foto dengan nama custom
   Future<void> _savePhotoWithCustomName(String originalPath) async {
     try {
-      if (kIsWeb) {
-        // Untuk web, gunakan path asli
-        return;
-      }
+      if (kIsWeb) return;
 
-      // Buat nama file dengan timestamp
       final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
       final fileName = 'clockin_${timestamp}.jpg';
 
       Directory? directory;
       if (Platform.isAndroid) {
         directory = await getExternalStorageDirectory();
-      } else if (Platform.isIOS) {
-        directory = await getApplicationDocumentsDirectory();
       } else {
         directory = await getApplicationDocumentsDirectory();
       }
 
       if (directory != null) {
-        // Buat folder khusus untuk foto clock in
         final clockInDir = Directory('${directory.path}/ClockInPhotos');
         if (!await clockInDir.exists()) {
           await clockInDir.create(recursive: true);
@@ -313,11 +413,11 @@ class _ClockInPageState extends State<ClockInPage>
         
         if (await originalFile.exists()) {
           await originalFile.copy(newPath);
-          print('Foto disimpan di: $newPath'); // Untuk debugging
+          print('Foto disimpan di: $newPath');
         }
       }
     } catch (e) {
-      print('Error saving photo: $e'); // Untuk debugging
+      print('Error saving photo: $e');
     }
   }
 
@@ -349,34 +449,93 @@ class _ClockInPageState extends State<ClockInPage>
 
       final faces = await _faceDetector.processImage(inputImage);
 
-      if (faces.isNotEmpty && faces[0].smilingProbability != null) {
+      if (faces.isNotEmpty) {
         final face = faces[0];
+        // Cek ukuran wajah minimal
         if (face.boundingBox.width > 50 && face.boundingBox.height > 50) {
           if (!_mounted) return;
           setState(() {
-            _smileProbability = face.smilingProbability!;
+            // Ambil smilingProbability jika tersedia, jika tidak set ke 0
+            _smileProbability = face.smilingProbability ?? 0.0;
             
-            if (_smileProbability! > 0.85) {
+            // Threshold yang lebih rendah untuk deteksi yang lebih sensitif
+            if (_smileProbability! >= 0.70) {
+              // Senyum lebar/baik
               _circleColor = Colors.green;
-            } else if (_smileProbability! > 0.65) {
+            } else if (_smileProbability! >= 0.50) {
+              // Senyum sedang
               _circleColor = Colors.orange;
-            } else if (_smileProbability! > 0.45) {
+            } else if (_smileProbability! >= 0.30) {
+              // Senyum kecil/tidak jelas
               _circleColor = Colors.yellow;
+            } else if (_smileProbability! > 0.0) {
+              // Wajah terdeteksi tapi tidak tersenyum
+              _circleColor = Colors.orange; // Orange untuk wajah terdeteksi tapi tidak tersenyum
             } else {
-              _circleColor = Colors.red;
+              // Wajah terdeteksi tapi tidak ada data senyum
+              _circleColor = Colors.yellow; // Kuning untuk wajah terdeteksi
             }
+          });
+        } else {
+          // Wajah terlalu kecil
+          if (!_mounted) return;
+          setState(() {
+            _smileProbability = null;
+            _circleColor = Colors.red;
           });
         }
       } else {
+        // Tidak ada wajah terdeteksi
         if (!_mounted) return;
         setState(() {
-          _smileProbability = 0.0;
+          _smileProbability = null;
           _circleColor = Colors.red;
         });
       }
-    } catch (e) {
-      // Silent error handling
-    }
+    } catch (e) {}
+  }
+
+  Widget _buildImagePickerView() {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: Colors.grey[900],
+      child: _selectedImage != null
+          ? Image.file(
+              File(_selectedImage!.path),
+              fit: BoxFit.cover,
+            )
+          : Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.camera_alt,
+                    size: 80,
+                    color: Colors.white54,
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Kamera Laptop',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Tekan tombol "Pilih Foto" untuk mengambil gambar',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 16,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+    );
   }
 
   @override
@@ -399,23 +558,23 @@ class _ClockInPageState extends State<ClockInPage>
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          _cameraController != null && _cameraController!.value.isInitialized
-              ? CameraPreview(_cameraController!)
-              : const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircularProgressIndicator(color: Colors.white),
-                      SizedBox(height: 16),
-                      Text(
-                        'Menginisialisasi kamera...',
-                        style: TextStyle(color: Colors.white),
+          _isUsingImagePicker
+              ? _buildImagePickerView()
+              : (_cameraController != null && _cameraController!.value.isInitialized
+                  ? CameraPreview(_cameraController!)
+                  : const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(color: Colors.white),
+                          SizedBox(height: 16),
+                          Text(
+                            'Menginisialisasi kamera...',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-
-          // ✅ Overlay saat capturing
+                    )),
           if (_isCapturing)
             Container(
               color: Colors.black.withOpacity(0.7),
@@ -437,8 +596,6 @@ class _ClockInPageState extends State<ClockInPage>
                 ),
               ),
             ),
-
-          // Header Section
           Positioned(
             top: 0,
             left: 0,
@@ -482,7 +639,7 @@ class _ClockInPageState extends State<ClockInPage>
                         ),
                         child: Center(
                           child: Text(
-                            _start.toString().padLeft(2, '0') + ':58',
+                            _formatTimer(_start),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 12,
@@ -497,8 +654,6 @@ class _ClockInPageState extends State<ClockInPage>
               ),
             ),
           ),
-
-          // Smile info and overlay
           Positioned(
             top: 140,
             left: 0,
@@ -528,10 +683,14 @@ class _ClockInPageState extends State<ClockInPage>
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    _smileProbability != null && _smileProbability! > 0.85
+                    _smileProbability != null && _smileProbability! >= 0.70
                         ? 'Tersenyum sempurna! 😊' 
-                        : _smileProbability != null && _smileProbability! > 0.45
+                        : _smileProbability != null && _smileProbability! >= 0.50
                         ? 'Senyum lebih lebar lagi! 😐'
+                        : _smileProbability != null && _smileProbability! > 0.0
+                        ? 'Wajah terdeteksi, tersenyum lebar! 😊'
+                        : _smileProbability != null && _smileProbability! == 0.0
+                        ? 'Wajah terdeteksi, tapi tidak tersenyum. Tersenyum lebar! 😊'
                         : 'Posisikan wajah Anda didalam lingkaran dan tersenyum lebar!',
                     style: const TextStyle(
                       color: Colors.white,
@@ -543,8 +702,6 @@ class _ClockInPageState extends State<ClockInPage>
               ],
             ),
           ),
-
-          // Animated rotating circle
           Center(
             child: Container(
               margin: const EdgeInsets.only(top: 40),
@@ -562,8 +719,6 @@ class _ClockInPageState extends State<ClockInPage>
               ),
             ),
           ),
-
-          // Bottom Info Panel
           Positioned(
             bottom: 0,
             left: 0,
@@ -609,87 +764,56 @@ class _ClockInPageState extends State<ClockInPage>
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: Colors.blue.withOpacity(0.3),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                          child: Text(
-                            kIsWeb ? 'Web' : Platform.operatingSystem,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontStyle: FontStyle.italic,
-                            ),
+                          child: const Text(
+                            'JAM MASUK: 08:00',
+                            style: TextStyle(color: Colors.white, fontSize: 12),
                           ),
                         ),
-                        // ✅ Indikator status foto
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: _capturedImagePath != null 
-                                ? Colors.green.withOpacity(0.3)
-                                : Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.red.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _capturedImagePath != null ? Icons.check_circle : Icons.camera_alt,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                              SizedBox(width: 4),
-                              Text(
-                                _capturedImagePath != null ? 'Foto tersimpan' : 'network',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ],
+                          child: const Text(
+                            'JAM PULANG: 09:40',
+                            style: TextStyle(color: Colors.white, fontSize: 12),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 20),
-                    // ✅ Tombol capture yang dapat diklik
-                    GestureDetector(
-                      onTap: _isCapturing ? null : _capturePhoto,
-                      child: Container(
-                        width: 70,
-                        height: 70,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: _isCapturing ? Colors.grey : Colors.white, 
-                            width: 3
-                          ),
-                          color: Colors.transparent,
-                        ),
-                        child: Center(
-                          child: Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: _isCapturing ? Colors.grey : Colors.white,
-                            ),
-                            child: _isCapturing
-                                ? SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
-                                    ),
-                                  )
-                                : Icon(
-                                    Icons.camera_alt,
-                                    color: Colors.black,
-                                    size: 24,
-                                  ),
+                    if (_isUsingImagePicker) ...[
+                      ElevatedButton(
+                        onPressed: _pickImageFromCamera,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(25),
                           ),
                         ),
+                        child: const Text(
+                          'Pilih Foto',
+                          style: TextStyle(fontSize: 18),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                    ElevatedButton(
+                      onPressed: _capturePhoto,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                      ),
+                      child: Text(
+                        _isClockedIn ? 'Clock Out' : 'Clock In',
+                        style: const TextStyle(fontSize: 18),
                       ),
                     ),
                   ],
@@ -700,40 +824,5 @@ class _ClockInPageState extends State<ClockInPage>
         ],
       ),
     );
-  }
-}
-
-class DashedCirclePainter extends CustomPainter {
-  final Color color;
-  DashedCirclePainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const dashWidth = 15.0;
-    const dashSpace = 8.0;
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke;
-
-    final radius = size.width / 2;
-    final circumference = 2 * math.pi * radius;
-    final dashCount = (circumference / (dashWidth + dashSpace)).floor();
-
-    for (int i = 0; i < dashCount; i++) {
-      final startAngle = i * (dashWidth + dashSpace) / radius;
-      canvas.drawArc(
-        Rect.fromCircle(center: size.center(Offset.zero), radius: radius),
-        startAngle,
-        dashWidth / radius,
-        false,
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant DashedCirclePainter oldDelegate) {
-    return oldDelegate.color != color;
   }
 }

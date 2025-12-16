@@ -60,6 +60,34 @@ class _TableBasicsExampleState extends State<TableBasicsExample> {
           _focusedDay = focusedDay;
         },
       ),
+      floatingActionButton: Container(
+        width: 50,
+        height: 50,
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFF0092C1),
+              Color(0xFF00AEB4),
+              Color(0xFF00CBA7),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: FloatingActionButton(
+          onPressed: () {
+            // TODO: Tambahkan aksi
+          },
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: const Icon(
+            Icons.add,
+            color: Colors.white,
+            size: 25,
+          ),
+        ),
+      ),
     );
   }
 }

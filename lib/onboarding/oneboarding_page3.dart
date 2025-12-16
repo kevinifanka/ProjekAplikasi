@@ -9,11 +9,15 @@ class OnboardingPage3 extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset('images/Frame 32.png', width: 200, height: 200),
+            Image.asset('images/face.png', width: 200, height: 200),
             SizedBox(height: 24),
             Text(
               "Presensi Akurat dengan Lokasi",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+              style: 
+              TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0961F5),
+                 fontSize: 20),
               textAlign: TextAlign.center,
             ),
             SizedBox(height: 12),

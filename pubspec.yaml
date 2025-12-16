@@ -24,6 +24,15 @@ dependencies:
   dropdown_button2: ^2.3.9
   path_provider: ^2.1.1
   google_maps_flutter: ^2.6.0
+  image_picker: ^1.1.2
+  shared_preferences: ^2.2.2
+  
+  # Firebase Dependencies
+  firebase_core: ^2.24.2
+  firebase_auth: ^4.15.3
+  cloud_firestore: ^4.13.6
+  firebase_storage: ^11.5.6
+  firebase_messaging: ^14.7.10
 
   
 
@@ -40,7 +49,7 @@ flutter:
     - images/face.png
     - images/Android Face.png
     - images/Frame 32.png
-    - images/Frame 34.png
+    - images/Tangan.png
     - images/google.png
     - images/Group.png
     - images/Home filled.png

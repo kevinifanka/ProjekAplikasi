@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1035669922634",
+    "project_id": "smart-clockin-presensi",
+    "storage_bucket": "smart-clockin-presensi.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1035669922634:android:2df05fc531e2976cec97b3",
+        "android_client_info": {
+          "package_name": "com.example.aplikasi_tugasakhir_presensi"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDE18oJ6RXbz8F-SNnQuk6QXo7plCyzqfA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

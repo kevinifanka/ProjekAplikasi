@@ -25,8 +25,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         curve: Curves.easeInOut,
       );
     } else {
-      // ✅ Gunakan pushNamed agar bisa kembali dari halaman berikutnya
-      Navigator.pushNamed(context, '/welcome');
+      // Langsung ke halaman register setelah onboarding selesai
+      Navigator.pushReplacementNamed(context, '/register');
     }
   }
 
@@ -52,7 +52,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 child: Padding(
                   padding: const EdgeInsets.only(left: 16, top: 8),
                   child: IconButton(
-                    icon: Icon(Icons.arrow_back),
+                    icon: const Icon(Icons.arrow_back, color: Color(0xFF0961F5)),
                     onPressed: _previousPage,
                   ),
                 ),
@@ -83,7 +83,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     width: _currentIndex == index ? 15 : 7,
                     height: 8,
                     decoration: BoxDecoration(
-                      color: _currentIndex == index ? Colors.amber : Colors.black,
+                      color: _currentIndex == index ? const Color(0xFF0961F5) : Colors.grey[300],
                       borderRadius: BorderRadius.circular(20),
                     ),
                   );
@@ -101,23 +101,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     child: ElevatedButton(
                       onPressed: _nextPage,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
+                        backgroundColor: const Color(0xFF0961F5),
                         padding: EdgeInsets.symmetric(vertical: 16),
                       ),
                       child: Text(
                         _currentIndex < _pages.length - 1
                             ? "Lanjutkan"
                             : "Mulai Sekarang",
-                        style: TextStyle(color: Colors.yellowAccent),
+                        style: const TextStyle(color: Colors.white),
                       ),
                     ),
                   ),
                   TextButton(
                     onPressed: () {
-                      // ✅ Gunakan pushNamed agar bisa kembali dari halaman Welcome
-                      Navigator.pushNamed(context, '/welcome');
+                      // Langsung ke halaman register saat lewati
+                      Navigator.pushReplacementNamed(context, '/register');
                     },
-                    child: Text("Lewati", style: TextStyle(color: Colors.black)),
+                    child: const Text("Lewati", style: TextStyle(color: Color(0xFF0961F5))),
                   ),
                 ],
               ),

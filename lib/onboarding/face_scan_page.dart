@@ -5,6 +5,7 @@ import 'package:aplikasi_tugasakhir_presensi/halamanfitur/clockin_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:camera/camera.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class FaceScanPage extends StatefulWidget {
   const FaceScanPage({super.key});
@@ -17,14 +18,31 @@ class _FaceScanPageState extends State<FaceScanPage> {
   late String _jam;
   late String _hariTanggal;
   late Timer _timer;
+  bool _isClockedIn = false;
+  String? _clockInTime;
 
   @override
   void initState() {
     super.initState();
     _updateTime();
+    _loadClockStatus();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       _updateTime();
+      _loadClockStatus(); // Update status setiap detik untuk realtime
     });
+  }
+  
+  Future<void> _loadClockStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isClockedIn = prefs.getBool('isClockedIn') ?? false;
+    final clockInTime = prefs.getString('clockInTime');
+    
+    if (mounted) {
+      setState(() {
+        _isClockedIn = isClockedIn;
+        _clockInTime = clockInTime;
+      });
+    }
   }
 
   void _updateTime() {
@@ -39,16 +57,33 @@ class _FaceScanPageState extends State<FaceScanPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh status ketika halaman muncul kembali
+    _loadClockStatus();
+  }
+
+  @override
   void dispose() {
     _timer.cancel();
     super.dispose();
   }
 
-  void _handlePresence() {
-    Navigator.push(
-      context,
-       MaterialPageRoute(builder: (context) =>  ClockInPage()),
+  void _handlePresence() async {
+    if (_isClockedIn) {
+      // Jika sudah clock in, arahkan ke clock out
+      // TODO: Implementasi halaman clock out jika berbeda
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => ClockInPage()),
       );
+    } else {
+      // Jika belum clock in, arahkan ke clock in
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => ClockInPage()),
+      );
+    }
   }
 
   Future<void> _openCamera() async {
@@ -124,10 +159,23 @@ class _FaceScanPageState extends State<FaceScanPage> {
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
-                        "Memuat data...",
-                        style: TextStyle(color: Colors.grey),
+                      Text(
+                        _isClockedIn ? "Sedang bekerja" : "Memuat data...",
+                        style: TextStyle(
+                          color: _isClockedIn ? Colors.green[700] : Colors.grey,
+                          fontWeight: _isClockedIn ? FontWeight.w500 : FontWeight.normal,
+                        ),
                       ),
+                      if (_isClockedIn && _clockInTime != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          "Clock In: ${DateFormat('HH:mm').format(DateTime.parse(_clockInTime!))}",
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 12),
                       const Text(
                         "📅 Regular Office",
@@ -145,18 +193,20 @@ class _FaceScanPageState extends State<FaceScanPage> {
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 18),
                           decoration: BoxDecoration(
-                            color: Colors.green[100],
+                            color: _isClockedIn ? Colors.orange[100] : Colors.green[100],
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              Icon(Icons.watch_later_outlined,
-                                  color: Colors.black87),
-                              SizedBox(width: 8),
+                            children: [
+                              Icon(
+                                _isClockedIn ? Icons.logout : Icons.watch_later_outlined,
+                                color: Colors.black87,
+                              ),
+                              const SizedBox(width: 8),
                               Text(
-                                "Clock In / Out Sekarang",
-                                style: TextStyle(color: Colors.black87),
+                                _isClockedIn ? "Clock Out" : "Clock In",
+                                style: const TextStyle(color: Colors.black87),
                               ),
                             ],
                           ),
